@@ -47,8 +47,7 @@ class XmppBot extends Robot
 
     # auto respond to friend requests
     if stanza.attrs.type is 'subscribe'
-        @client.send(new Xmpp.Element('presence', to: stanza.attrs.from)
-            .c('type', 'subscribed'))
+        @client.send(new Xmpp.Element('presence', to: stanza.attrs.from, type: 'subscribed'))
         return
 
     # ignore non-messages
