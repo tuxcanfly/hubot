@@ -71,7 +71,7 @@ class XmppBot extends Robot
       message = new Xmpp.Element('message', 
                   from: @options.username
                   to: user.room
-                  type: 'groupchat'
+                  type: 'chat'
                 ).
                 c('body').t(str)
       
