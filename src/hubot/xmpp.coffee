@@ -3,14 +3,14 @@ Xmpp  = require 'node-xmpp'
 
 class XmppBot extends Robot
   run: ->
-    options = 
+    options =
       username: process.env.HUBOT_XMPP_USERNAME
       password: process.env.HUBOT_XMPP_PASSWORD
       rooms:    process.env.HUBOT_XMPP_ROOMS.split(',')
       keepaliveInterval: 30000 # ms interval to send whitespace to xmpp server
-      
+
     console.log options
-    
+
     @client = new Xmpp.Client
       jid: options.username
       password: options.password
@@ -22,7 +22,7 @@ class XmppBot extends Robot
 
   online: =>
     console.log 'Hubot XMPP client online'
-    
+
     @client.send new Xmpp.Element('presence', type: 'available' )
       .c('show').t('chat')
 
@@ -34,9 +34,9 @@ class XmppBot extends Robot
         .c('history', seconds: 1 )) # prevent the server from confusing us with old messages
                                     # and it seems that servers don't reliably support maxchars
                                     # or zero values
-      
-    # send raw whitespace for keepalive 
-    setInterval => 
+
+    # send raw whitespace for keepalive
+    setInterval =>
       @client.send ' '
     , @options.keepaliveInterval
 
@@ -45,36 +45,42 @@ class XmppBot extends Robot
       console.error '[xmpp error]' + stanza
       return
 
+    # auto respond to friend requests
+    if stanza.attrs.type is 'subscribe'
+        @client.send(new Xmpp.Element('presence', to: stanza.attrs.from)
+            .c('type', 'subscribed'))
+        return
+
     # ignore non-messages
     return if !stanza.is 'message' || stanza.attrs.type not in ['groupchat', 'direct', 'chat']
 
     # ignore our own messages
     return if @options.username in stanza.attrs.from
-      
+
     # ignore empty bodies (i.e., topic changes -- maybe watch these someday)
     body = stanza.getChild 'body'
     return unless body
-    
+
     message = body.getText()
-    
+
     [room, from] = stanza.attrs.from.split '/'
     user = new Robot.User from, {
       room: room
     }
-    
+
     @receive new Robot.Message user, message
 
   send: (user, strings...) ->
     strings.forEach (str) =>
       console.log "Sending to #{user.room}: #{str}"
-      
-      message = new Xmpp.Element('message', 
+
+      message = new Xmpp.Element('message',
                   from: @options.username
                   to: user.room
                   type: 'chat'
                 ).
                 c('body').t(str)
-      
+
       @client.send message
 
   reply: (user, strings...) ->
